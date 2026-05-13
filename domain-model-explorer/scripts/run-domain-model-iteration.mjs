@@ -13,6 +13,7 @@ const WORKSPACE_ROOT = path.join(REPO_ROOT, '.codex/skills/domain-model-explorer
 const SCRIPT_PATH = path.join(__dirname, 'domain-model-query.mjs')
 const SKILL_NAME = 'domain-model-explorer'
 const DEFAULT_BASE_URL = 'https://ddd.hixqz.com/api/v1'
+const NODE_BIN = process.execPath
 
 function resolveBaseUrl() {
   return process.env.DOMAIN_MODEL_API_BASE_URL || DEFAULT_BASE_URL
@@ -71,7 +72,7 @@ function runSkillCommand(baseUrl, authConfig, args) {
   }
 
   const start = Date.now()
-  const proc = spawnSync('node', [SCRIPT_PATH, ...args], {
+  const proc = spawnSync(NODE_BIN, [SCRIPT_PATH, ...args], {
     cwd: REPO_ROOT,
     env,
     encoding: 'utf-8',
@@ -82,7 +83,7 @@ function runSkillCommand(baseUrl, authConfig, args) {
     stderr: (proc.stderr || '').trim(),
     returncode: proc.status ?? 1,
     duration,
-    command: `node ${path.relative(REPO_ROOT, SCRIPT_PATH)} ${args.join(' ')}`.trim(),
+    command: `${NODE_BIN} ${path.relative(REPO_ROOT, SCRIPT_PATH)} ${args.join(' ')}`.trim(),
   }
 }
 

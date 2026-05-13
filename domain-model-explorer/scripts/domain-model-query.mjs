@@ -1008,6 +1008,42 @@ function parseBool(value, defaultValue = false) {
   return String(value).toLowerCase() === 'true'
 }
 
+function parseNamedArgs(args, { commandName, allowedOptions }) {
+  const allowed = new Set(allowedOptions)
+  const options = {}
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index]
+    if (!arg.startsWith('--')) {
+      throw new QueryError(
+        `Usage: node scripts/domain-model-query.mjs ${commandName} ${allowedOptions.map((item) => `[--${item} <value>]`).join(' ')}`
+      )
+    }
+
+    const raw = arg.slice(2)
+    const separatorIndex = raw.indexOf('=')
+    const name = separatorIndex >= 0 ? raw.slice(0, separatorIndex) : raw
+    let value = separatorIndex >= 0 ? raw.slice(separatorIndex + 1) : undefined
+
+    if (!allowed.has(name)) {
+      throw new QueryError(`未知参数 --${name}。允许的参数：${allowedOptions.map((item) => `--${item}`).join(', ')}`)
+    }
+
+    if (value === undefined) {
+      const next = args[index + 1]
+      if (next === undefined || next.startsWith('--')) {
+        throw new QueryError(`参数 --${name} 缺少值`)
+      }
+      value = next
+      index += 1
+    }
+
+    options[name] = value
+  }
+
+  return options
+}
+
 function authStatus() {
   const tokenInfo = getTokenInfo()
   const lines = [
@@ -1036,21 +1072,13 @@ function authStatus() {
   return lines.join('\n')
 }
 
-function runAuthInit(argv) {
-  let projectId
-  let baseUrl = BASE_URL
-
-  if (argv.length > 2) {
-    const first = argv[2]
-    if (first.startsWith('http://') || first.startsWith('https://')) {
-      baseUrl = first
-    } else {
-      projectId = first
-      if (argv.length > 3) {
-        baseUrl = argv[3]
-      }
-    }
-  }
+function runAuthInit(args) {
+  const options = parseNamedArgs(args, {
+    commandName: 'auth-init',
+    allowedOptions: ['project-id', 'base-url'],
+  })
+  const projectId = options['project-id']
+  const baseUrl = options['base-url'] || BASE_URL
 
   const config = buildLocalConfigUpdates({ projectId, baseUrl })
   writeLocalConfig(config)
@@ -1067,13 +1095,17 @@ function runAuthInit(argv) {
   ].join('\n')
 }
 
-function runAuthLogin(argv) {
-  if (argv.length < 3) {
-    throw new QueryError('Usage: node scripts/domain-model-query.mjs auth-login <accessToken> [projectId] [baseUrl]')
+function runAuthLogin(args) {
+  const options = parseNamedArgs(args, {
+    commandName: 'auth-login',
+    allowedOptions: ['access-token', 'project-id', 'base-url'],
+  })
+  if (!options['access-token']) {
+    throw new QueryError('Usage: node scripts/domain-model-query.mjs auth-login --access-token <accessToken> [--project-id <projectId>] [--base-url <baseUrl>]')
   }
-  const accessToken = argv[2]
-  const projectId = argv[3] || PROJECT_ID || undefined
-  const baseUrl = argv[4] || BASE_URL
+  const accessToken = options['access-token']
+  const projectId = options['project-id'] || PROJECT_ID || undefined
+  const baseUrl = options['base-url'] || BASE_URL
   const config = buildLocalConfigUpdates({ accessToken, projectId, baseUrl })
   writeLocalConfig(config)
   return [
@@ -1117,16 +1149,20 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-async function runAuthLoginBrowser(argv) {
-  const projectId = argv[2] || PROJECT_ID || undefined
-  const baseUrl = argv[3] || BASE_URL
-  const permission = argv[4] || DEFAULT_AUTH_PERMISSION
+async function runAuthLoginBrowser(args) {
+  const options = parseNamedArgs(args, {
+    commandName: 'auth-login-browser',
+    allowedOptions: ['project-id', 'base-url', 'permission', 'expires-in'],
+  })
+  const projectId = options['project-id'] || PROJECT_ID || undefined
+  const baseUrl = options['base-url'] || BASE_URL
+  const permission = options.permission || DEFAULT_AUTH_PERMISSION
   if (!['read', 'write'].includes(permission)) {
-    throw new QueryError('Usage: node scripts/domain-model-query.mjs auth-login-browser [projectId] [baseUrl] [read|write] [expiresInSeconds]')
+    throw new QueryError('Usage: node scripts/domain-model-query.mjs auth-login-browser [--project-id <projectId>] [--base-url <baseUrl>] [--permission read|write] [--expires-in <seconds>]')
   }
-  const expiresIn = argv[5] ? Number.parseInt(argv[5], 10) : DEFAULT_AUTH_EXPIRES_IN_SECONDS
+  const expiresIn = options['expires-in'] ? Number.parseInt(options['expires-in'], 10) : DEFAULT_AUTH_EXPIRES_IN_SECONDS
   if (!Number.isSafeInteger(expiresIn) || expiresIn <= 0) {
-    throw new QueryError('expiresInSeconds 必须是正整数秒数')
+    throw new QueryError('--expires-in 必须是正整数秒数')
   }
 
   const reuse = canReuseCurrentToken({
@@ -1218,17 +1254,17 @@ async function main(argv) {
   }
 
   if (command === 'auth-init') {
-    console.log(runAuthInit(argv.slice(1)))
+    console.log(runAuthInit(argv.slice(3)))
     return 0
   }
 
   if (command === 'auth-login') {
-    console.log(runAuthLogin(argv.slice(1)))
+    console.log(runAuthLogin(argv.slice(3)))
     return 0
   }
 
   if (command === 'auth-login-browser') {
-    console.log(await runAuthLoginBrowser(argv.slice(1)))
+    console.log(await runAuthLoginBrowser(argv.slice(3)))
     return 0
   }
 

@@ -59,15 +59,15 @@ Default mode is user-first:
 Default base URL is `https://ddd.hixqz.com/api/v1`. Only pass a base URL when you need to override it explicitly. Project can also be chosen later in the browser flow:
 
 ```bash
-node scripts/domain-model-query.mjs auth-init "http://localhost:3000/api/v1"
-node scripts/domain-model-query.mjs auth-init "<project-id>" "http://localhost:3000/api/v1"
+node scripts/domain-model-query.mjs auth-init --base-url "http://localhost:3000/api/v1"
+node scripts/domain-model-query.mjs auth-init --project-id "<project-id>" --base-url "http://localhost:3000/api/v1"
 ```
 
 Explicit override examples:
 
 ```bash
 DOMAIN_MODEL_API_BASE_URL="http://localhost:3000/api/v1" node scripts/domain-model-query.mjs auth-status
-DOMAIN_MODEL_API_BASE_URL="http://localhost:3000/api/v1" node scripts/domain-model-query.mjs auth-login-browser "<project-id>" "http://localhost:3000/api/v1"
+DOMAIN_MODEL_API_BASE_URL="http://localhost:3000/api/v1" node scripts/domain-model-query.mjs auth-login-browser --project-id "<project-id>" --base-url "http://localhost:3000/api/v1"
 ```
 
 Resolution order:
@@ -83,25 +83,26 @@ DOMAIN_MODEL_API_BASE_URL
 Manual token flow:
 
 ```text
-<app-origin>/api/auth/access-token?projectId=<project-id>&permission=read
 <app-origin>/api/auth/access-token?projectId=<project-id>&permission=write&expiresIn=86400
+<app-origin>/api/auth/access-token?projectId=<project-id>&permission=read&expiresIn=3600  # only for temporary read-only access
 ```
 
 Then save the returned `access_token`:
 
 ```bash
-node scripts/domain-model-query.mjs auth-login "<query-access-token>" "<project-id>"
+node scripts/domain-model-query.mjs auth-login --access-token "<query-access-token>" --project-id "<project-id>"
 ```
 
 Prefer the browser automation flow when possible:
 
 ```bash
 node scripts/domain-model-query.mjs auth-login-browser
-node scripts/domain-model-query.mjs auth-login-browser "<project-id>" "http://localhost:3000/api/v1" write
-node scripts/domain-model-query.mjs auth-login-browser "<project-id>" "http://localhost:3000/api/v1" read 3600
+node scripts/domain-model-query.mjs auth-login-browser --project-id "<project-id>" --base-url "http://localhost:3000/api/v1" --permission write
+node scripts/domain-model-query.mjs auth-login-browser --project-id "<project-id>" --base-url "http://localhost:3000/api/v1" --permission read --expires-in 3600  # temporary read-only only
 ```
 
 `auth-login-browser` 默认申请 `write` 权限，默认有效期为 `86400` 秒。只有确实需要临时只读令牌时，才显式传 `read`。
+认证命令只接受显式参数，不再使用位置参数；例如用 `--project-id`、`--base-url`、`--permission`、`--expires-in` 表达含义。
 
 ### Auth status
 
@@ -500,7 +501,7 @@ For write confirmations, prefer shapes like:
 ### Create one node
 
 1. `auth-status`
-2. If needed, `auth-login-browser <projectId> <baseUrl> write`
+2. If needed, `auth-login-browser --project-id <projectId> --base-url <baseUrl> --permission write`
 3. `create-node <jsonPayload>`
 
 ### Edit or delete one relation
