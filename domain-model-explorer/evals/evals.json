@@ -1,0 +1,135 @@
+{
+  "skill_name": "domain-model-explorer",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "先别读代码，帮我从整体设计上看看这个系统大概分成了哪些业务块。",
+      "expected_output": "触发 skill，优先使用领域模型查询能力，输出简洁的上下文总览，包含结果和补充说明，并明确提到 OrderContext 和 UserContext。",
+      "expectations": [
+        "结果包含“结果：”。",
+        "结果包含“补充说明：”。",
+        "结果包含 OrderContext 和 UserContext。",
+        "结果给出一个具体的下一步建议。"
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "看下用户锁定后会触发什么操作，只看当前这条业务链路，回答先用业务语言，不要一上来堆技术节点名。",
+      "expected_output": "触发 skill，优先给出业务语言结论，再补充上下游动作、是否跨上下文，以及技术链路补充。",
+      "expectations": [
+        "结果包含“结果：”。",
+        "结果包含“补充说明：”。",
+        "结果提到“用户已锁定”或“用户锁定”。",
+        "结果包含“技术链路补充”。"
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "帮我看下，用户创建新购订单会有哪些流程，我想先理解这条业务链路，再看必要的技术补充。",
+      "expected_output": "触发 skill，围绕 OrderContext / 新购订单链路输出简洁结果，不先讲查询过程。",
+      "expectations": [
+        "结果包含“结果：”。",
+        "结果包含“补充说明：”。",
+        "结果提到“新购订单”或“创建新购订单”。",
+        "结果包含“技术链路补充”。"
+      ],
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "先帮我查一下 PaymentStarted 这个节点，如果不存在就明确告诉我，不要瞎猜，然后给我一个最接近的下一步查询建议。",
+      "expected_output": "触发 skill，走 node-detail 查询，明确说明节点不存在，再建议去列上下文节点或确认真实节点名。",
+      "expectations": [
+        "结果明确说明节点不存在或未找到。",
+        "结果没有编造该节点的详情。",
+        "结果给出一个具体的下一步查询建议。"
+      ],
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "直接在事件风暴里给我新增一个 PaymentTimedOutEvent，放到 OrderContext，显示名写成支付超时，不要让我手动点页面。",
+      "expected_output": "触发 skill，先给出新增节点的影响表，列清上下文、节点、参数和规则，并等待用户确认后再执行。",
+      "expectations": [
+        "结果包含确认前说明，例如“请确认后我再执行”。",
+        "结果包含 Markdown 表格分隔符，例如“| 操作 |”。",
+        "结果提到 PaymentTimedOutEvent 和 OrderContext。",
+        "结果提到参数、字段、规则、注意事项中的至少一项。"
+      ],
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "把 PaymentTimedOutEvent 的显示名称改成支付已超时，只改这个节点，改完告诉我最终结果。",
+      "expected_output": "触发 skill，先唯一定位节点，再输出更新影响表，列出将变化和不变化的字段，并等待用户确认。",
+      "expectations": [
+        "结果包含确认前说明，例如“请确认后我再执行”。",
+        "结果包含 Markdown 表格分隔符，例如“| 操作 |”。",
+        "结果提到 PaymentTimedOutEvent 和“支付已超时”。",
+        "结果提到只修改列出的字段、未列出字段保持不变，或同等意思。"
+      ],
+      "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "给 PlaceOrderCommand 和 OrderPlacedEvent 补一条 triggers 关系，创建完把 relation id 告诉我。",
+      "expected_output": "触发 skill，解析 source/target 后先输出关系新增影响表，列出 source、target、relationType 等信息，并等待确认。",
+      "expectations": [
+        "结果包含确认前说明，例如“请确认后我再执行”。",
+        "结果包含 Markdown 表格分隔符，例如“| 操作 |”。",
+        "结果提到 PlaceOrderCommand、OrderPlacedEvent 和 triggers。",
+        "结果提到 source、target、relationType、label 中的至少两项。"
+      ],
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "把刚才那条 PlaceOrderCommand 到 OrderPlacedEvent 的关系标签改成创建订单，如果找不到精确关系先查清楚，不要瞎改。",
+      "expected_output": "触发 skill，必要时先 list-relations 定位关系，再输出关系更新影响表，并避免在关系不唯一时盲改。",
+      "expectations": [
+        "结果包含确认前说明，例如“请确认后我再执行”。",
+        "结果包含 Markdown 表格分隔符，例如“| 操作 |”。",
+        "结果提到创建订单。",
+        "结果体现先定位关系或确认 relation id 的意识。"
+      ],
+      "files": []
+    },
+    {
+      "id": 9,
+      "prompt": "删除 PaymentTimedOutEvent，如果它会把关联关系一起删掉，也先列出来给我确认，不要直接执行。",
+      "expected_output": "触发 skill，先定位节点，再输出删除影响表，显式说明节点删除及其可能级联删除的关系，等待确认后再执行。",
+      "expectations": [
+        "结果包含确认前说明，例如“请确认后我再执行”。",
+        "结果包含 Markdown 表格分隔符，例如“| 操作 |”。",
+        "结果提到 PaymentTimedOutEvent。",
+        "结果提到级联删除、关联关系、影响关系中的至少一项。"
+      ],
+      "files": []
+    },
+    {
+      "id": 10,
+      "prompt": "我在建模订单状态，像 CREATED、PAID、CANCELED 这种状态字段你直接帮我补到模型里，别偷懒直接写 enum。",
+      "expected_output": "触发 skill，在建模层明确把状态类字段建模为值对象而不是 enum，参数上只保留值对象类型名，不展开 code/name 之类内部属性，并把具体可选值写在规则说明里。",
+      "expectations": [
+        "结果提到值对象或 ValueObject。",
+        "结果明确说明不要展开 `code`、`name` 这类内部属性，或同等意思。",
+        "结果不会把字段类型直接写成 enum。",
+        "结果提到具体枚举值应写在规则、说明或备注中。"
+      ],
+      "files": []
+    },
+    {
+      "id": 11,
+      "prompt": "我先随手写个 status: enum(CREATED, PAID, CANCELED)，你直接帮我落模型。",
+      "expected_output": "触发 skill，但不会接受过于泛化的 Status 作为值对象名；应要求补充更具体的业务值对象名，例如 OrderStatus 或 PaymentStatus，再继续落模型。",
+      "expectations": [
+        "结果明确指出 `Status` 这类命名过于泛化，不能直接落模型。",
+        "结果要求用户提供更具体的值对象名。",
+        "结果给出至少一个业务化命名示例，例如 `OrderStatus` 或 `PaymentStatus`。"
+      ],
+      "files": []
+    }
+  ]
+}

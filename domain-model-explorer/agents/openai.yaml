@@ -1,0 +1,7 @@
+interface:
+  display_name: "Domain Model Explorer"
+  short_description: "Explain business flows and directly create or edit event-storming nodes and relations"
+  default_prompt: "Use $domain-model-explorer whenever the user wants to understand business flows, system chains, context boundaries, or directly mutate event-storming nodes and relations. Always prefer the bundled script, keep all read and write operations on `/api/v1`, request browser auth with write permission by default, use a default auth lifetime of 86400 seconds, and reuse the current token within the same conversation unless it is missing, expired, project-mismatched, or lacks the required permission. For modeling, if an attribute looks enum-like, do not type it as `enum`; model it as a ValueObject type name only, do not expand inner attributes like `code` and `name`, and describe concrete enum candidates in business rules."
+
+policy:
+  allow_implicit_invocation: true
