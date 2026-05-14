@@ -53,6 +53,17 @@ function hasRequiredPermission(tokenInfo, requiredPermission = 'read') {
   return tokenInfo.permissions.includes(requiredPermission)
 }
 
+function requireWriteToken(accessToken, sourceLabel) {
+  const tokenInfo = getTokenInfo(accessToken)
+  if (!tokenInfo) {
+    throw new QueryError(`${sourceLabel}不是有效的查询令牌`)
+  }
+  if (!tokenInfo.permissions.includes('write')) {
+    throw new QueryError(`${sourceLabel}缺少 write 权限，当前权限：${formatPermissionSummary(tokenInfo)}。请重新申请写权限令牌。`)
+  }
+  return tokenInfo
+}
+
 function canReuseCurrentToken({ requestedProjectId, requiredPermission = 'read' } = {}) {
   if (!hasUserToken()) {
     return { reusable: false, reason: 'missing' }
@@ -1062,6 +1073,9 @@ function authStatus() {
     lines.push(`- 令牌项目：${tokenInfo.projectId || '未声明'}`)
     lines.push(`- 令牌过期时间：${formatTokenExpiry(tokenInfo)}`)
     lines.push(`- 令牌状态：${tokenInfo.isExpired ? '已过期' : '可复用'}`)
+    if (!hasRequiredPermission(tokenInfo, 'write')) {
+      lines.push('- 写权限状态：当前令牌不是 write，请执行 auth-login-browser 重新申请写权限令牌。')
+    }
   }
 
   if (hasUserToken()) {
@@ -1104,6 +1118,7 @@ function runAuthLogin(args) {
     throw new QueryError('Usage: node scripts/domain-model-query.mjs auth-login --access-token <accessToken> [--project-id <projectId>] [--base-url <baseUrl>]')
   }
   const accessToken = options['access-token']
+  requireWriteToken(accessToken, '手动提供的 access token')
   const projectId = options['project-id'] || PROJECT_ID || undefined
   const baseUrl = options['base-url'] || BASE_URL
   const config = buildLocalConfigUpdates({ accessToken, projectId, baseUrl })
@@ -1156,9 +1171,9 @@ async function runAuthLoginBrowser(args) {
   })
   const projectId = options['project-id'] || PROJECT_ID || undefined
   const baseUrl = options['base-url'] || BASE_URL
-  const permission = options.permission || DEFAULT_AUTH_PERMISSION
-  if (!['read', 'write'].includes(permission)) {
-    throw new QueryError('Usage: node scripts/domain-model-query.mjs auth-login-browser [--project-id <projectId>] [--base-url <baseUrl>] [--permission read|write] [--expires-in <seconds>]')
+  const permission = DEFAULT_AUTH_PERMISSION
+  if (options.permission && options.permission !== DEFAULT_AUTH_PERMISSION) {
+    throw new QueryError('auth-login-browser 只申请 write 权限，不支持 read。请去掉 --permission，或使用 --permission write。')
   }
   const expiresIn = options['expires-in'] ? Number.parseInt(options['expires-in'], 10) : DEFAULT_AUTH_EXPIRES_IN_SECONDS
   if (!Number.isSafeInteger(expiresIn) || expiresIn <= 0) {
@@ -1211,9 +1226,10 @@ async function runAuthLoginBrowser(args) {
       if (!accessToken) {
         throw new QueryError('浏览器认证已完成，但没有拿到 access token')
       }
+      const tokenInfo = requireWriteToken(accessToken, '浏览器认证返回的 access token')
       const config = buildLocalConfigUpdates({
         accessToken,
-        projectId: resolvedProjectId,
+        projectId: resolvedProjectId || tokenInfo.projectId,
         baseUrl,
       })
       writeLocalConfig(config)

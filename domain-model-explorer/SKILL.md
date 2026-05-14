@@ -84,7 +84,6 @@ Manual token flow:
 
 ```text
 <app-origin>/api/auth/access-token?projectId=<project-id>&permission=write&expiresIn=86400
-<app-origin>/api/auth/access-token?projectId=<project-id>&permission=read&expiresIn=3600  # only for temporary read-only access
 ```
 
 Then save the returned `access_token`:
@@ -98,11 +97,11 @@ Prefer the browser automation flow when possible:
 ```bash
 node scripts/domain-model-query.mjs auth-login-browser
 node scripts/domain-model-query.mjs auth-login-browser --project-id "<project-id>" --base-url "http://localhost:3000/api/v1" --permission write
-node scripts/domain-model-query.mjs auth-login-browser --project-id "<project-id>" --base-url "http://localhost:3000/api/v1" --permission read --expires-in 3600  # temporary read-only only
+node scripts/domain-model-query.mjs auth-login-browser --project-id "<project-id>" --base-url "http://localhost:3000/api/v1" --expires-in 86400
 ```
 
-`auth-login-browser` 默认申请 `write` 权限，默认有效期为 `86400` 秒。只有确实需要临时只读令牌时，才显式传 `read`。
-认证命令只接受显式参数，不再使用位置参数；例如用 `--project-id`、`--base-url`、`--permission`、`--expires-in` 表达含义。
+`auth-login-browser` 默认申请 `write` 权限，默认有效期为 `86400` 秒。认证命令不会保存缺少 `write` 权限的令牌。
+认证命令只接受显式参数，不再使用位置参数；例如用 `--project-id`、`--base-url`、`--expires-in` 表达含义。`--permission` 仅兼容 `write`，不支持申请 `read`。
 
 ### Auth status
 
@@ -118,22 +117,22 @@ Within one conversation, prefer reusing the current token instead of reissuing a
 
 - default behavior: one conversation reuses one token
 - only re-auth when the token is missing, expired, project-mismatched, or permission-mismatched
-- read tasks should reuse the current token when it is still valid; a `write` token satisfies read operations
-- only switch to a new `write` token when the current token cannot satisfy a write operation
+- read tasks should reuse the current `write` token when it is still valid
+- switch to a new `write` token when the current token is missing, expired, project-mismatched, or permission-mismatched
 - calling `auth-login-browser` with the same project and sufficient permission should reuse the existing token and avoid reopening the browser
 
 ### Write permission rule
 
-- Read-only exploration can use a `read` token.
+- Read-only exploration should still use the default `write` token to avoid repeated re-auth when exploration continues into mutation.
 - Any node or relation mutation requires a `write` token.
 - Default browser authentication should request a `write` token so exploration can naturally continue into confirmed mutations.
-- If a write command returns a permission error and the current token is only `read`, request a new `write` token.
+- If `auth-status` shows the current token is only `read`, request a new `write` token with `auth-login-browser`.
 - Do not reissue a token just because another command in the same conversation starts. Reuse first, re-auth only when required.
 
 ### Security rules
 
 - never print `DOMAIN_MODEL_ACCESS_TOKEN` in terminal output or user-facing answers
-- prefer `write` by default; use `read` only when a short-lived read-only token is explicitly desired
+- always request `write`; do not request or save read-only tokens
 - after switching projects, request a new token to avoid scope mismatch
 - avoid repeated `auth-login-browser` calls in one conversation when the current token is still valid for the same project and permission
 
